@@ -1,0 +1,244 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------- Auth (NextAuth Prisma adapter shape) ----------
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model User {
+  id             String          @id @default(cuid())
+  name           String?
+  email          String          @unique
+  emailVerified  DateTime?
+  image          String?
+  passwordHash   String? // only set when using the Credentials provider (dev/demo)
+  accounts       Account[]
+  sessions       Session[]
+  jobs           Job[]
+  resumeVersions ResumeVersion[]
+  resumeMatches  ResumeMatch[]
+  apiTokens      ApiToken[]
+  seasonWatches  SeasonWatch[]
+  leetCodeStats  LeetCodeStats?
+  createdAt      DateTime        @default(now())
+}
+
+// ---------- Domain model ----------
+
+enum Stage {
+  APPLIED
+  OA
+  INTERVIEWING
+  OFFER
+}
+
+enum Status {
+  APPLIED
+  OA
+  INTERVIEWING
+  OFFER
+  REJECTED
+}
+
+enum Source {
+  LINKEDIN
+  SIMPLIFY
+  REFERRAL
+  COMPANY_SITE
+  GITHUB_REPO
+  OTHER
+}
+
+model ResumeVersion {
+  id        String   @id @default(cuid())
+  label     String // e.g. "Resume_V8"
+  fileUrl   String? // link to the actual file in blob storage
+  resumeText String? @db.Text // plain-text content, pasted in — powers the Match tool's per-version scoring
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs      Job[]
+  matches   ResumeMatch[]
+  createdAt DateTime @default(now())
+
+  @@unique([userId, label])
+}
+
+model Job {
+  id              String           @id @default(cuid())
+  company         String
+  role            String
+  source          Source           @default(OTHER)
+  status          Status           @default(APPLIED)
+  peak            Stage            @default(APPLIED) // furthest stage ever reached, used for funnel/conversion stats
+  sourceUrl       String? // the job posting URL — populated by Discover's "add to pipeline" or the Chrome extension
+  appliedDate     DateTime         @default(now())
+  deadline        DateTime?
+  notes           String?          @db.Text
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeVersionId String?
+  resumeVersion   ResumeVersion?   @relation(fields: [resumeVersionId], references: [id])
+  interviewRounds InterviewRound[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([userId, status])
+}
+
+// ---------- Aggregated postings (Discover feed) ----------
+// Populated by `npm run ingest` from public, ToS-compliant sources only:
+// Greenhouse/Lever public job-board APIs and the SimplifyJobs GitHub listings.
+// Never scrapes LinkedIn, Simplify's own site, or any site that prohibits it.
+
+enum PostingSource {
+  GREENHOUSE
+  LEVER
+  GITHUB_LIST
+}
+
+model JobPosting {
+  id          String        @id @default(cuid())
+  company     String
+  role        String
+  location    String?
+  url         String
+  source      PostingSource
+  sourceRef   String? // e.g. greenhouse board token, lever slug, or github listing id
+  postedAt    DateTime? // when the source says it was first posted
+  sourceSeenAt DateTime     @default(now()) // when our ingest first saw it
+  isActive    Boolean       @default(true)
+  dedupeKey   String        @unique // hash of normalized company+role+location, prevents duplicates across sources
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([company])
+  @@index([isActive, postedAt])
+}
+
+model ResumeMatch {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeVersionId String?
+  resumeVersion   ResumeVersion? @relation(fields: [resumeVersionId], references: [id])
+  jdText          String         @db.Text
+  jdCompany       String?
+  jdRole          String?
+  matchScore      Int
+  matchingSkills  String[]
+  missingSkills   String[]
+  createdAt       DateTime       @default(now())
+
+  @@index([userId])
+}
+
+// Companies a user is tracking for recruiting-season countdowns. There's no
+// public, structured source for "when does X's internship program open" —
+// that information mostly circulates as word of mouth (Reddit, LinkedIn,
+// past cycles) rather than anything scrapable or API-exposed. So rather
+// than fabricate open dates, this lets the user record what they've heard
+// and cross-references it against real Discover data (JobPosting) to show
+// "actually open now" vs "expected around this date."
+// Cached LeetCode profile stats. LeetCode has no official public API — this
+// reads the same unauthenticated GraphQL endpoint leetcode.com's own
+// frontend uses for public profile pages (https://leetcode.com/graphql,
+// read-only, no auth). Since it's undocumented and could change or rate-
+// limit without notice, results are cached here and only refetched at most
+// every 15 minutes (enforced server-side in src/lib/leetcode.ts), not on
+// every page load.
+model LeetCodeStats {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  username         String
+  totalSolved      Int
+  easySolved       Int
+  mediumSolved     Int
+  hardSolved       Int
+  totalEasy        Int
+  totalMedium      Int
+  totalHard        Int
+  ranking          Int?
+  contestRating    Float?
+  attendedContests Int?
+  currentStreak    Int
+  fetchedAt        DateTime @default(now())
+}
+
+model SeasonWatch {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company          String
+  expectedOpenDate DateTime?
+  notes            String?
+  createdAt        DateTime  @default(now())
+
+  @@unique([userId, company])
+  @@index([userId])
+}
+
+model ApiToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label      String // e.g. "Chrome extension"
+  tokenHash  String    @unique // sha256 of the actual token — the plaintext is shown once and never stored
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model InterviewRound {
+  id          String    @id @default(cuid())
+  jobId       String
+  job         Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  roundName   String // e.g. "Phone screen", "Onsite 1", "Behavioral"
+  interviewer String?
+  questions   String?   @db.Text
+  outcome     String? // "Passed", "Rejected", "Pending"
+  scheduledAt DateTime?
+  createdAt   DateTime  @default(now())
+}
