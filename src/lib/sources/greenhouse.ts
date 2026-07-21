@@ -16,6 +16,12 @@ const INTERN_PATTERN = /intern/i;
 // Public, unauthenticated, no rate-limit key required. This is the same
 // endpoint companies use to power their own careers pages, so pulling from
 // it is explicitly within intended use.
+//
+// Kept intern-only by title match here — a full-time role often doesn't say
+// "new grad" or "entry level" in its title even when it is one, so a
+// keyword filter for that side would be unreliable and quietly wrong.
+// Full-time coverage comes from the New-Grad-Positions GitHub list instead,
+// which is human-curated specifically for that purpose.
 export async function fetchGreenhouseBoard(boardToken: string): Promise<NormalizedPosting[]> {
   const url = `https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(boardToken)}/jobs`;
   const res = await fetch(url, { headers: { Accept: "application/json" } });
@@ -35,5 +41,7 @@ export async function fetchGreenhouseBoard(boardToken: string): Promise<Normaliz
       source: "GREENHOUSE" as const,
       sourceRef: `${boardToken}/${job.id}`,
       postedAt: job.updated_at ? new Date(job.updated_at) : null,
+      employmentType: "INTERNSHIP" as const,
+      term: null,
     }));
 }

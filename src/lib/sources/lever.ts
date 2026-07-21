@@ -31,5 +31,7 @@ export async function fetchLeverCompany(companySlug: string): Promise<Normalized
       source: "LEVER" as const,
       sourceRef: `${companySlug}/${p.id}`,
       postedAt: p.createdAt ? new Date(p.createdAt) : null,
+      employmentType: "INTERNSHIP" as const,
+      term: null,
     }));
 }

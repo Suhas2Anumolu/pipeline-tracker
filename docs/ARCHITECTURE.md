@@ -43,9 +43,9 @@ This is the real codebase version of the interactive demo — same data model, s
    ```
    This creates a demo account: `demo@pipeline.dev` / `demo1234`, with 8 seeded applications and two resume versions pre-loaded with resume text (for the Match tool's compare-versions mode).
 
-   **Already have this project set up from before?** Pull the latest files, then run a fresh migration to pick up the new `JobPosting`, `ResumeMatch`, `ApiToken`, `SeasonWatch`, and `LeetCodeStats` models plus the `resumeText` field on `ResumeVersion` and `sourceUrl` field on `Job`:
+   **Already have this project set up from before?** Pull the latest files, then run a fresh migration to pick up the new `JobPosting`, `ResumeMatch`, `ApiToken`, `SeasonWatch`, and `LeetCodeStats` models, the `employmentType`/`term` fields on `JobPosting`, plus the `resumeText` field on `ResumeVersion` and `sourceUrl` field on `Job`:
    ```bash
-   npx prisma migrate dev --name add_leetcode_stats
+   npx prisma migrate dev --name add_employment_type_and_term
    ```
 
 5. **Pull in real internship postings (optional but recommended)**
@@ -144,14 +144,20 @@ src/components/             Board, JobCard, AddJobForm, charts
 ## A note on where postings come from
 
 `npm run ingest` only ever talks to:
-- **Greenhouse's `boards-api.greenhouse.io`** and **Lever's `api.lever.co`** — both are public, unauthenticated, unrate-limited-by-key endpoints that companies stand up *specifically* so external job boards can consume them. No ToS conflict.
-- **Two community GitHub internship lists** (`src/lib/sources/github-repo.ts`): SimplifyJobs/Summer2026-Internships and both-sides/summer2026-internships (the latter is the successor to vanshb03's repo — "the torch has been passed," per its own README). Both are public, MIT-licensed JSON files with the identical `listings.json` schema, meant to be read programmatically — fetched in parallel and deduped against each other.
+- **Greenhouse's `boards-api.greenhouse.io`** and **Lever's `api.lever.co`** — both are public, unauthenticated, unrate-limited-by-key endpoints that companies stand up *specifically* so external job boards can consume them. No ToS conflict. Both are kept intern-only by title match (`/intern/i`) — a full-time "new grad" role rarely says so in its title, so a keyword filter for that side would be unreliable and quietly wrong. Full-time coverage comes from a curated list instead (below).
+- **Three community GitHub lists** (`src/lib/sources/github-repo.ts`), all sharing the identical `listings.json` schema:
+  - SimplifyJobs/Summer2026-Internships and both-sides/summer2026-internships (the latter is the successor to vanshb03's repo — "the torch has been passed," per its own README) — both tagged `INTERNSHIP`
+  - SimplifyJobs/New-Grad-Positions — tagged `FULL_TIME`, this is where full-time filtering gets its real data from, not a guess
 
 It deliberately does **not** scrape LinkedIn or Simplify's own site directly — both prohibit that in their ToS, and LinkedIn in particular has pursued scrapers legally before (`hiQ v. LinkedIn`). You inherit rough coverage of what students find on those platforms for free, since community members already funnel it into the GitHub lists by hand.
 
+**`term`** (e.g. "Summer 2026", "Fall 2026") is taken directly from each listing's own `terms[0]` field in the source data — not parsed or inferred from a title or date. Only postings from the GitHub lists have a `term` value; Greenhouse/Lever postings don't expose season data in a structured way, so `term` is `null` for those and they still show up under "All seasons."
+
 ## Discover: pagination, filters, and post-add removal
 
-`/api/postings` supports `page`, `pageSize` (max 50), `q` (searches company/role/location), `source` (`GREENHOUSE`/`LEVER`/`GITHUB_LIST`), and `postedWithinDays`. The Discover page wraps these in a search box + two filter dropdowns + prev/next pagination, resetting to page 1 whenever a filter changes.
+`/api/postings` supports `page`, `pageSize` (max 50), `q` (searches company/role/location), `source` (`GREENHOUSE`/`LEVER`/`GITHUB_LIST`), `employmentType` (`INTERNSHIP`/`FULL_TIME`), `term` (exact match against the season string), and `postedWithinDays`. It also returns `availableTerms` — the distinct list of season values currently in the database — computed against all active postings regardless of the current filter combination, so the season dropdown's options don't shrink/reorder as other filters change.
+
+The Discover page wraps these in a search box + four filter dropdowns (employment type, season, source, freshness) + prev/next pagination, resetting to page 1 whenever any filter changes.
 
 **Once a user adds a posting to their pipeline, it's excluded from Discover — permanently, not just for that session.** This is done server-side in the same query, not client-side filtering: `/api/postings` looks up the current user's own `Job.sourceUrl` values and excludes any posting whose `url` matches one. This means it holds across page reloads, different devices, pagination — anywhere that query runs — rather than only hiding it in local component state until the next fetch brings it back.
 

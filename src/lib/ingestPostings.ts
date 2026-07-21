@@ -70,7 +70,7 @@ export async function runIngest(prisma: PrismaClient): Promise<IngestResult> {
   let updated = 0;
 
   for (const posting of postings) {
-    const key = dedupeKey(posting.company, posting.role, posting.location);
+    const key = dedupeKey(posting.company, posting.role, posting.location, posting.employmentType);
     if (seenKeys.has(key)) continue;
     seenKeys.add(key);
 
@@ -80,6 +80,7 @@ export async function runIngest(prisma: PrismaClient): Promise<IngestResult> {
         url: posting.url,
         location: posting.location,
         postedAt: posting.postedAt,
+        term: posting.term,
         isActive: true,
         sourceSeenAt: new Date(),
       },
@@ -91,6 +92,8 @@ export async function runIngest(prisma: PrismaClient): Promise<IngestResult> {
         source: posting.source,
         sourceRef: posting.sourceRef,
         postedAt: posting.postedAt,
+        employmentType: posting.employmentType,
+        term: posting.term,
         dedupeKey: key,
       },
     });

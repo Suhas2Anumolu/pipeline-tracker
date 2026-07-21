@@ -137,6 +137,11 @@ enum PostingSource {
   GITHUB_LIST
 }
 
+enum EmploymentType {
+  INTERNSHIP
+  FULL_TIME
+}
+
 model JobPosting {
   id          String        @id @default(cuid())
   company     String
@@ -145,6 +150,8 @@ model JobPosting {
   url         String
   source      PostingSource
   sourceRef   String? // e.g. greenhouse board token, lever slug, or github listing id
+  employmentType EmploymentType @default(INTERNSHIP)
+  term        String? // e.g. "Summer 2026", "Fall 2026" — taken directly from the source's own "terms" field, not parsed/guessed
   postedAt    DateTime? // when the source says it was first posted
   sourceSeenAt DateTime     @default(now()) // when our ingest first saw it
   isActive    Boolean       @default(true)
@@ -154,6 +161,7 @@ model JobPosting {
 
   @@index([company])
   @@index([isActive, postedAt])
+  @@index([employmentType])
 }
 
 model ResumeMatch {

@@ -1,9 +1,11 @@
 import type { NormalizedPosting } from "./types";
+import type { EmploymentType } from "@prisma/client";
 
-// Schema confirmed against both repos' own CONTRIBUTING.md docs — both use
-// the identical listings.json format (the second repo's maintainer forked
-// from / was inspired by the first, per its own README: "This repo is
-// inspired by Pitt CSC & Simplify Repo").
+// Schema confirmed against each repo's own CONTRIBUTING.md — all three use
+// the identical listings.json format (same maintainer tooling across all of
+// them). Internship vs. full-time is NOT parsed or guessed from the listing
+// itself — it's determined by which repo it came from, since Simplify/Vansh
+// maintain entirely separate repos for internships vs. new-grad roles.
 type GithubListing = {
   company_name: string;
   company_url: string;
@@ -11,7 +13,7 @@ type GithubListing = {
   date_posted: number; // unix seconds
   date_updated: number; // unix seconds
   url: string;
-  terms: string[];
+  terms: string[]; // e.g. ["Summer 2026"] — used directly as the "term" filter value
   locations: string[];
   active: boolean;
   is_visible: boolean;
@@ -19,21 +21,25 @@ type GithubListing = {
   id: string;
 };
 
-// Two public, MIT-licensed, community-maintained datasets — not scrape
-// targets, both explicitly built to be consumed as structured data. Swap
-// repo names each year as new cycles start (e.g. Summer2027-Internships).
-const GITHUB_LIST_SOURCES = [
+const GITHUB_LIST_SOURCES: { label: string; url: string; employmentType: EmploymentType }[] = [
   {
-    label: "SimplifyJobs",
+    label: "SimplifyJobs-Internships",
     url: "https://raw.githubusercontent.com/SimplifyJobs/Summer2026-Internships/dev/.github/scripts/listings.json",
+    employmentType: "INTERNSHIP",
   },
   {
-    label: "both-sides (formerly vanshb03)",
+    label: "both-sides-Internships",
     url: "https://raw.githubusercontent.com/both-sides/summer2026-internships/dev/.github/scripts/listings.json",
+    employmentType: "INTERNSHIP",
+  },
+  {
+    label: "SimplifyJobs-NewGrad",
+    url: "https://raw.githubusercontent.com/SimplifyJobs/New-Grad-Positions/dev/.github/scripts/listings.json",
+    employmentType: "FULL_TIME",
   },
 ];
 
-async function fetchOneList(source: { label: string; url: string }): Promise<NormalizedPosting[]> {
+async function fetchOneList(source: (typeof GITHUB_LIST_SOURCES)[number]): Promise<NormalizedPosting[]> {
   const res = await fetch(source.url, { headers: { Accept: "application/json" } });
   if (!res.ok) {
     console.warn(`GitHub listings fetch for ${source.label} returned ${res.status}, skipping.`);
@@ -49,10 +55,12 @@ async function fetchOneList(source: { label: string; url: string }): Promise<Nor
       location: l.locations?.[0] ?? null,
       url: l.url,
       source: "GITHUB_LIST" as const,
-      // Prefix with the source label so the same listing id from two
-      // different repos never collides in the dedupe key.
+      // Prefix with the source label so the same listing id from different
+      // repos never collides in the dedupe key.
       sourceRef: `${source.label}:${l.id}`,
       postedAt: l.date_posted ? new Date(l.date_posted * 1000) : null,
+      employmentType: source.employmentType,
+      term: l.terms?.[0] ?? null,
     }));
 }
 

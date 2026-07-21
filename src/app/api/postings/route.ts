@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireCurrentUserId, StaleSessionError } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import type { Prisma, PostingSource } from "@prisma/client";
+import type { Prisma, PostingSource, EmploymentType } from "@prisma/client";
 
 const PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 50;
 const VALID_SOURCES: PostingSource[] = ["GREENHOUSE", "LEVER", "GITHUB_LIST"];
+const VALID_EMPLOYMENT_TYPES: EmploymentType[] = ["INTERNSHIP", "FULL_TIME"];
 
 export async function GET(request: Request) {
   try {
@@ -13,7 +14,9 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q")?.trim();
-    const source = searchParams.get("source")?.trim(); // GREENHOUSE | LEVER | GITHUB_LIST
+    const source = searchParams.get("source")?.trim();
+    const employmentType = searchParams.get("employmentType")?.trim();
+    const term = searchParams.get("term")?.trim();
     const postedWithinDays = searchParams.get("postedWithinDays");
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1);
     const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(searchParams.get("pageSize") ?? String(PAGE_SIZE), 10) || PAGE_SIZE));
@@ -41,12 +44,16 @@ export async function GET(request: Request) {
           }
         : {}),
       ...(source && VALID_SOURCES.includes(source as PostingSource) ? { source: source as PostingSource } : {}),
+      ...(employmentType && VALID_EMPLOYMENT_TYPES.includes(employmentType as EmploymentType)
+        ? { employmentType: employmentType as EmploymentType }
+        : {}),
+      ...(term ? { term: { equals: term, mode: "insensitive" } } : {}),
       ...(postedWithinDays
         ? { postedAt: { gte: new Date(Date.now() - Number(postedWithinDays) * 86400000) } }
         : {}),
     };
 
-    const [postings, total] = await Promise.all([
+    const [postings, total, availableTerms] = await Promise.all([
       prisma.jobPosting.findMany({
         where,
         orderBy: [{ postedAt: "desc" }, { sourceSeenAt: "desc" }],
@@ -54,6 +61,15 @@ export async function GET(request: Request) {
         take: pageSize,
       }),
       prisma.jobPosting.count({ where }),
+      // Distinct terms across ALL active postings (not filtered by the
+      // current query) so the season dropdown's option list stays stable
+      // as the user changes other filters, rather than shrinking to just
+      // whatever matches the current filter combination.
+      prisma.jobPosting.findMany({
+        where: { isActive: true, term: { not: null } },
+        select: { term: true },
+        distinct: ["term"],
+      }),
     ]);
 
     return NextResponse.json({
@@ -62,6 +78,7 @@ export async function GET(request: Request) {
       page,
       pageSize,
       totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      availableTerms: availableTerms.map((t) => t.term).filter((t): t is string => !!t).sort(),
     });
   } catch (err) {
     if (err instanceof StaleSessionError) {
