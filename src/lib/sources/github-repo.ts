@@ -1,7 +1,9 @@
 import type { NormalizedPosting } from "./types";
 
-// Schema confirmed against SimplifyJobs/Summer2026-Internships CONTRIBUTING.md:
-// https://github.com/SimplifyJobs/Summer2026-Internships/blob/dev/CONTRIBUTING.md#listingsjson-schema
+// Schema confirmed against both repos' own CONTRIBUTING.md docs — both use
+// the identical listings.json format (the second repo's maintainer forked
+// from / was inspired by the first, per its own README: "This repo is
+// inspired by Pitt CSC & Simplify Repo").
 type GithubListing = {
   company_name: string;
   company_url: string;
@@ -17,17 +19,24 @@ type GithubListing = {
   id: string;
 };
 
-const LISTINGS_URL =
-  "https://raw.githubusercontent.com/SimplifyJobs/Summer2026-Internships/dev/.github/scripts/listings.json";
+// Two public, MIT-licensed, community-maintained datasets — not scrape
+// targets, both explicitly built to be consumed as structured data. Swap
+// repo names each year as new cycles start (e.g. Summer2027-Internships).
+const GITHUB_LIST_SOURCES = [
+  {
+    label: "SimplifyJobs",
+    url: "https://raw.githubusercontent.com/SimplifyJobs/Summer2026-Internships/dev/.github/scripts/listings.json",
+  },
+  {
+    label: "both-sides (formerly vanshb03)",
+    url: "https://raw.githubusercontent.com/both-sides/summer2026-internships/dev/.github/scripts/listings.json",
+  },
+];
 
-// This is a public, MIT-licensed dataset maintained specifically to be
-// consumed by tools like this one — community members and Simplify both
-// contribute to it as structured data, not a scrape target. Swap the repo
-// name each year (e.g. Summer2027-Internships) as new cycles start.
-export async function fetchGithubListings(): Promise<NormalizedPosting[]> {
-  const res = await fetch(LISTINGS_URL, { headers: { Accept: "application/json" } });
+async function fetchOneList(source: { label: string; url: string }): Promise<NormalizedPosting[]> {
+  const res = await fetch(source.url, { headers: { Accept: "application/json" } });
   if (!res.ok) {
-    console.warn(`GitHub listings fetch returned ${res.status}, skipping.`);
+    console.warn(`GitHub listings fetch for ${source.label} returned ${res.status}, skipping.`);
     return [];
   }
   const listings: GithubListing[] = await res.json();
@@ -40,7 +49,19 @@ export async function fetchGithubListings(): Promise<NormalizedPosting[]> {
       location: l.locations?.[0] ?? null,
       url: l.url,
       source: "GITHUB_LIST" as const,
-      sourceRef: l.id,
+      // Prefix with the source label so the same listing id from two
+      // different repos never collides in the dedupe key.
+      sourceRef: `${source.label}:${l.id}`,
       postedAt: l.date_posted ? new Date(l.date_posted * 1000) : null,
     }));
+}
+
+export async function fetchGithubListings(): Promise<NormalizedPosting[]> {
+  const results = await Promise.allSettled(GITHUB_LIST_SOURCES.map(fetchOneList));
+  const postings: NormalizedPosting[] = [];
+  results.forEach((r, i) => {
+    if (r.status === "fulfilled") postings.push(...r.value);
+    else console.warn(`GitHub listings fetch failed for ${GITHUB_LIST_SOURCES[i].label}:`, r.reason);
+  });
+  return postings;
 }

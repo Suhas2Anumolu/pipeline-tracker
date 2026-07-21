@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import Logo from "@/components/Logo";
+import SignOutButton from "@/components/SignOutButton";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -32,6 +33,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <Link href="/match" className="hover:text-ink">Match score</Link>
                 <Link href="/analytics" className="hover:text-ink">Analytics</Link>
                 <Link href="/settings" className="hover:text-ink">Settings</Link>
+                <SignOutButton />
               </nav>
             ) : (
               <nav className="flex items-center gap-3 font-sans text-sm">

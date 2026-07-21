@@ -145,9 +145,15 @@ src/components/             Board, JobCard, AddJobForm, charts
 
 `npm run ingest` only ever talks to:
 - **Greenhouse's `boards-api.greenhouse.io`** and **Lever's `api.lever.co`** — both are public, unauthenticated, unrate-limited-by-key endpoints that companies stand up *specifically* so external job boards can consume them. No ToS conflict.
-- **The SimplifyJobs GitHub internship list** — a public, MIT-licensed JSON file maintained by real contributors and Simplify's own daily sync, meant to be read programmatically.
+- **Two community GitHub internship lists** (`src/lib/sources/github-repo.ts`): SimplifyJobs/Summer2026-Internships and both-sides/summer2026-internships (the latter is the successor to vanshb03's repo — "the torch has been passed," per its own README). Both are public, MIT-licensed JSON files with the identical `listings.json` schema, meant to be read programmatically — fetched in parallel and deduped against each other.
 
-It deliberately does **not** scrape LinkedIn or Simplify's own site directly — both prohibit that in their ToS, and LinkedIn in particular has pursued scrapers legally before (`hiQ v. LinkedIn`). You inherit rough coverage of what students find on those platforms for free, since community members already funnel it into the GitHub list by hand.
+It deliberately does **not** scrape LinkedIn or Simplify's own site directly — both prohibit that in their ToS, and LinkedIn in particular has pursued scrapers legally before (`hiQ v. LinkedIn`). You inherit rough coverage of what students find on those platforms for free, since community members already funnel it into the GitHub lists by hand.
+
+## Discover: pagination, filters, and post-add removal
+
+`/api/postings` supports `page`, `pageSize` (max 50), `q` (searches company/role/location), `source` (`GREENHOUSE`/`LEVER`/`GITHUB_LIST`), and `postedWithinDays`. The Discover page wraps these in a search box + two filter dropdowns + prev/next pagination, resetting to page 1 whenever a filter changes.
+
+**Once a user adds a posting to their pipeline, it's excluded from Discover — permanently, not just for that session.** This is done server-side in the same query, not client-side filtering: `/api/postings` looks up the current user's own `Job.sourceUrl` values and excludes any posting whose `url` matches one. This means it holds across page reloads, different devices, pagination — anywhere that query runs — rather than only hiding it in local component state until the next fetch brings it back.
 
 ## Data model notes
 

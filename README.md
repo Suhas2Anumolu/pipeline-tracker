@@ -8,7 +8,7 @@
 
 One board for every application, every resume version, and every deadline — plus the analytics that actually tell you what's working.
 
-<img width="662" height="276" alt="Screenshot 2026-07-20 at 9 31 43 PM" src="https://github.com/user-attachments/assets/2ea223ec-7910-45b6-b35d-74a94609ea0c" />· [Report a bug](../../issues) · [Chrome extension](../../tree/main/pipeline-extension)
+[Live demo](#) · [Report a bug](../../issues) · [Chrome extension](../../tree/main/pipeline-extension)
 
 </div>
 
@@ -18,15 +18,15 @@ One board for every application, every resume version, and every deadline — pl
 
 Applying to 100+ internships in a spreadsheet doesn't scale. Pipeline replaces the spreadsheet with a real app:
 
--  **Kanban pipeline board** — drag applications from Applied → OA → Interviewing → Offer, with round-by-round interview notes on every card
--  **Discover** — internship postings aggregated from company Greenhouse/Lever boards and the community GitHub internship list, one click to add to your board
--  **AI resume feedback** — upload a resume, get a match score against any job description, missing keywords, and specific fixes — not just keyword overlap
--  **Analytics** — funnel by stage, best-performing sources, and which resume version actually converts
--  **AI follow-up drafts** — thank-you notes, recruiter check-ins, referral asks, and negotiation drafts, generated from the specific application's context
--  **Chrome extension** — capture any job posting into your board in one click, from any site
--  **LeetCode stats** — solved counts, streak, and contest rating on your profile
--  **Season dashboard** — track companies you're waiting on, cross-referenced against live posting data
--  **Google sign-in** — or email/password for local use
+- 🗂️ **Kanban pipeline board** — drag applications from Applied → OA → Interviewing → Offer, with round-by-round interview notes on every card
+- 🧭 **Discover** — internship postings aggregated from company Greenhouse/Lever boards and the community GitHub internship list, one click to add to your board
+- 📄 **AI resume feedback** — upload a resume, get a match score against any job description, missing keywords, and specific fixes — not just keyword overlap
+- 📊 **Analytics** — funnel by stage, best-performing sources, and which resume version actually converts
+- ✉️ **AI follow-up drafts** — thank-you notes, recruiter check-ins, referral asks, and negotiation drafts, generated from the specific application's context
+- 🧩 **Chrome extension** — capture any job posting into your board in one click, from any site
+- 🏆 **LeetCode stats** — solved counts, streak, and contest rating on your profile
+- 📅 **Season dashboard** — track companies you're waiting on, cross-referenced against live posting data
+- 🔐 **Google sign-in** — or email/password for local use
 
 ## Screenshot
 
