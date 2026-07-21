@@ -8,8 +8,7 @@
 
 One board for every application, every resume version, and every deadline — plus the analytics that actually tell you what's working.
 
-<img width="662" height="276" alt="Screenshot 2026-07-20 at 9 31 43 PM" src="https://github.com/user-attachments/assets/818cdbab-c3af-4c00-9d42-29951ae44e6f" />
-· [Report a bug](../../issues) · [Chrome extension](../../tree/main/pipeline-extension)
+<img width="662" height="276" alt="Screenshot 2026-07-20 at 9 31 43 PM" src="https://github.com/user-attachments/assets/818cdbab-c3af-4c00-9d42-29951ae44e6f" />· [Report a bug](../../issues) · [Chrome extension](../../tree/main/pipeline-extension)
 
 </div>
 
