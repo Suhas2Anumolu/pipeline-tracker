@@ -8,7 +8,7 @@
 
 One board for every application, every resume version, and every deadline — plus the analytics that actually tell you what's working.
 
-<img width="662" height="276" alt="Screenshot 2026-07-20 at 9 31 43 PM" src="https://github.com/user-attachments/assets/818cdbab-c3af-4c00-9d42-29951ae44e6f" />· [Report a bug](../../issues) · [Chrome extension](../../tree/main/pipeline-extension)
+<img width="662" height="276" alt="Screenshot 2026-07-20 at 9 31 43 PM" src="https://github.com/user-attachments/assets/818cdbab-c3af-4c00-9d42-29951ae44e6f" />· [Report a bug](../../issues) · [Chrome extension](https://microsoftedge.microsoft.com/addons/detail/pipeline-%E2%80%94-job-capture/knpfllgpmhoonjfldbcmlbjccbnkilpl)
 
 </div>
 
@@ -60,7 +60,7 @@ Pipeline deploys cleanly to Vercel with a hosted Postgres (Neon or Supabase both
 
 ## Chrome extension
 
-A companion browser extension lives in [`pipeline-extension/`](pipeline-extension) — capture any job posting into your board in one click, from any site. See its own README for loading it locally or publishing to the Chrome Web Store / Microsoft Edge Add-ons.
+A companion browser extension lives in [`pipeline-extension/`](https://microsoftedge.microsoft.com/addons/detail/pipeline-%E2%80%94-job-capture/knpfllgpmhoonjfldbcmlbjccbnkilpl) — capture any job posting into your board in one click, from any site. See its own README for loading it locally or publishing to the Chrome Web Store / Microsoft Edge Add-ons.
 
 ## Contributing
 
